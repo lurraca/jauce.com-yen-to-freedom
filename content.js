@@ -4,12 +4,6 @@ const DEFAULT_RATES = {
   EUR: 0.0062
 };
 
-// Selectors for price elements on jauce.com
-const PRICE_SELECTORS = [
-  'div.display.current-bid.notranslate',
-  'div.fr.notranslate'
-];
-
 let cachedRates = null;
 
 async function getRates() {
@@ -28,92 +22,124 @@ async function getRates() {
 }
 
 function formatCurrency(amount, currency) {
-  const symbols = { USD: '$', EUR: '\u20ac' };
+  const symbols = { USD: '$', EUR: '€' };
   const symbol = symbols[currency] || currency;
   return `${symbol}${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function createConversionElement(yenAmount, rates) {
-  const usdAmount = yenAmount * rates.USD;
-  const eurAmount = yenAmount * rates.EUR;
-
-  const container = document.createElement('div');
-  container.className = 'yen-to-freedom-conversion';
-  container.style.cssText = `
-    margin-top: 4px;
-    font-size: 0.85em;
-    color: #2e7d32;
-    line-height: 1.4;
-  `;
-
-  container.innerHTML = `
-    <div>\u2248 ${formatCurrency(usdAmount, 'USD')} USD</div>
-    <div>\u2248 ${formatCurrency(eurAmount, 'EUR')} EUR</div>
-  `;
-
-  return container;
-}
-
 function parseYenAmount(text) {
-  // Remove currency symbols, commas, spaces, and extract number
-  const cleaned = text.replace(/[^\d.-]/g, '');
+  // Extract number from text like "4,200 yen" or "440yen"
+  const cleaned = text.replace(/[^\d]/g, '');
   const amount = parseFloat(cleaned);
   return isNaN(amount) ? null : amount;
 }
 
-async function convertPriceElements() {
+async function convertMainBid() {
   const rates = await getRates();
 
-  PRICE_SELECTORS.forEach(selector => {
-    const elements = document.querySelectorAll(selector);
+  // Target: <div class="display current-bid notranslate"> 4,200 <span>yen</span></div>
+  const mainBidElements = document.querySelectorAll('div.display.current-bid.notranslate');
 
-    elements.forEach(element => {
-      // Skip if already converted
-      if (element.dataset.yenToFreedomConverted === 'true') {
-        return;
-      }
+  mainBidElements.forEach(element => {
+    if (element.dataset.yenToFreedomConverted === 'true') return;
 
-      const yenAmount = parseYenAmount(element.textContent);
+    const yenAmount = parseYenAmount(element.textContent);
+    if (!yenAmount || yenAmount <= 0) return;
 
-      if (yenAmount !== null && yenAmount > 0) {
-        const conversionEl = createConversionElement(yenAmount, rates);
+    const usdAmount = yenAmount * rates.USD;
+    const eurAmount = yenAmount * rates.EUR;
 
-        // Insert after the price element
-        if (element.nextSibling) {
-          element.parentNode.insertBefore(conversionEl, element.nextSibling);
-        } else {
-          element.parentNode.appendChild(conversionEl);
-        }
+    // Create conversion element (block, below)
+    const conversion = document.createElement('div');
+    conversion.className = 'yen-to-freedom-conversion';
+    conversion.style.cssText = `
+      margin-top: 4px;
+      font-size: 0.85em;
+      color: #2e7d32;
+      line-height: 1.4;
+    `;
+    conversion.innerHTML = `
+      <div>≈ ${formatCurrency(usdAmount, 'USD')} USD</div>
+      <div>≈ ${formatCurrency(eurAmount, 'EUR')} EUR</div>
+    `;
 
-        // Mark as converted
-        element.dataset.yenToFreedomConverted = 'true';
-      }
-    });
+    // Insert after the bid element
+    element.parentNode.insertBefore(conversion, element.nextSibling);
+    element.dataset.yenToFreedomConverted = 'true';
   });
+}
+
+async function convertShippingFee() {
+  const rates = await getRates();
+
+  // Find rows containing "shipping fee" or "warehouse"
+  const rows = document.querySelectorAll('td.notranslate');
+
+  rows.forEach(row => {
+    const rowText = row.textContent.toLowerCase();
+    if (!rowText.includes('shipping') && !rowText.includes('warehouse')) return;
+
+    // Find the article element with yen amount inside .fr.notranslate
+    const frDiv = row.querySelector('div.fr.notranslate');
+    if (!frDiv) return;
+
+    const article = frDiv.querySelector('article');
+    if (!article) return;
+    if (article.dataset.yenToFreedomConverted === 'true') return;
+
+    const articleText = article.textContent.trim();
+    if (!articleText.toLowerCase().includes('yen')) return;
+
+    const yenAmount = parseYenAmount(articleText);
+    if (!yenAmount || yenAmount <= 0) return;
+
+    const usdAmount = yenAmount * rates.USD;
+    const eurAmount = yenAmount * rates.EUR;
+
+    // Create inline conversion (same line)
+    const conversion = document.createElement('span');
+    conversion.className = 'yen-to-freedom-conversion';
+    conversion.style.cssText = `
+      margin-left: 8px;
+      font-size: 0.9em;
+      color: #2e7d32;
+    `;
+    conversion.textContent = `≈ ${formatCurrency(usdAmount, 'USD')} / ${formatCurrency(eurAmount, 'EUR')}`;
+
+    // Append inline after the yen text
+    article.appendChild(conversion);
+    article.dataset.yenToFreedomConverted = 'true';
+  });
+}
+
+async function convertAllPrices() {
+  await convertMainBid();
+  await convertShippingFee();
 }
 
 // Listen for rate updates from background
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === 'local' && changes.rates) {
     cachedRates = changes.rates.newValue;
-    // Optionally update existing conversions
     updateExistingConversions();
   }
 });
 
 function updateExistingConversions() {
-  // Remove existing conversions and reconvert
+  // Remove existing conversions
   document.querySelectorAll('.yen-to-freedom-conversion').forEach(el => el.remove());
-  PRICE_SELECTORS.forEach(selector => {
-    document.querySelectorAll(selector).forEach(el => {
-      el.dataset.yenToFreedomConverted = 'false';
-    });
+  document.querySelectorAll('[data-yen-to-freedom-converted]').forEach(el => {
+    delete el.dataset.yenToFreedomConverted;
   });
-  convertPriceElements();
+  convertAllPrices();
 }
 
 // Initial conversion
-convertPriceElements();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', convertAllPrices);
+} else {
+  convertAllPrices();
+}
 
 // Observe DOM for dynamically loaded content
 const observer = new MutationObserver((mutations) => {
@@ -127,9 +153,8 @@ const observer = new MutationObserver((mutations) => {
   }
 
   if (shouldConvert) {
-    // Debounce to avoid excessive calls
     clearTimeout(window.yenToFreedomTimeout);
-    window.yenToFreedomTimeout = setTimeout(convertPriceElements, 100);
+    window.yenToFreedomTimeout = setTimeout(convertAllPrices, 100);
   }
 });
 
