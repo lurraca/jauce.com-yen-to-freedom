@@ -1,0 +1,106 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  width: 280px;
+  background: #fafafa;
+  color: #333;
+}
+
+.container {
+  padding: 16px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+header h1 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.rates {
+  background: white;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.rates h2 {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #666;
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+}
+
+.rate-row {
+  display: flex;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 14px;
+}
+
+.rate-row:not(:last-child) {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.currency {
+  color: #666;
+  min-width: 50px;
+}
+
+.equals {
+  color: #999;
+  margin: 0 8px;
+}
+
+.value {
+  font-weight: 600;
+  color: #2e7d32;
+  flex: 1;
+}
+
+.currency-code {
+  color: #666;
+  font-size: 12px;
+}
+
+.status {
+  text-align: center;
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 12px;
+}
+
+.refresh-btn {
+  width: 100%;
+  padding: 10px 16px;
+  background: #2e7d32;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: #1b5e20;
+}
+
+.refresh-btn:disabled {
+  background: #a5d6a7;
+  cursor: not-allowed;
+}

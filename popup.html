@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yen to Freedom</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Yen to Freedom</h1>
+    </header>
+
+    <section class="rates">
+      <h2>Current Rates</h2>
+      <div class="rate-row">
+        <span class="currency">1 JPY</span>
+        <span class="equals">=</span>
+        <span id="usd-rate" class="value">--</span>
+        <span class="currency-code">USD</span>
+      </div>
+      <div class="rate-row">
+        <span class="currency">1 JPY</span>
+        <span class="equals">=</span>
+        <span id="eur-rate" class="value">--</span>
+        <span class="currency-code">EUR</span>
+      </div>
+    </section>
+
+    <section class="status">
+      <p>Last updated: <span id="last-update">--</span></p>
+    </section>
+
+    <button id="refresh-btn" class="refresh-btn">
+      Refresh Rates
+    </button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
